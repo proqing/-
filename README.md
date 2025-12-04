@@ -1,10 +1,9 @@
 # 2025c游戏项目
 
-
-
 #define  _CRT_SECURE_NO_WARNINGS
 #include<stdio.h>
 #include<graphics.h>
+#include<conio.h>
 #include "tools.h"
 
 #define WIN_WIDTH 1012
@@ -18,6 +17,17 @@ IMAGE imgHeros[12];
 int heroX;
 int heroY;
 int heroIndex;//图片帧序号
+bool heroJump;
+int jumpHeightMax;
+int heroJumpOff;
+int update;
+
+IMAGE imgTortoise;
+int torToiseX;
+int torToiseY;
+bool torToiseExist=false;
+
+
 
 void init() 
 {
@@ -38,6 +48,15 @@ void init()
 	heroX = WIN_WIDTH * 0.5 - imgHeros[0].getwidth()*0.5;
 	heroY = 345 - imgHeros[0].getheight();
 	heroIndex = 0;
+	heroJump = false;
+	
+	jumpHeightMax = 345 - imgHeros[0].getheight() - 120;
+	heroJumpOff = -4;
+	update = true;
+
+	loadimage(&imgTortoise, "res/t1.png");
+	torToiseExist = false;
+	torToiseY = 345 - imgTortoise.getheight()+5;
 }
 
 void fly()
@@ -49,7 +68,45 @@ void fly()
 			bgX[i] = 0;
 		}
 	}
-	heroIndex = (heroIndex + 1) % 12;//循环呈现这几张图片
+	
+	//实现跳跃
+	if (heroJump) {
+		if (heroY < jumpHeightMax) {
+			heroJumpOff = 4;
+		}
+
+		heroY += heroJumpOff;
+
+		if (heroY > 345 - imgHeros[0].getheight()) {
+			heroJump = false;
+			heroJumpOff = -4;
+		}
+	}
+	else {
+		heroIndex = (heroIndex + 1) % 12;//循环呈现这几张图片
+	}
+
+	static int frameCount = 0; 
+	static int torToiseFre = 100;
+	frameCount++;
+	if (frameCount > torToiseFre) {
+		frameCount = 0;
+		if (!torToiseExist) {
+			torToiseExist = true;
+			torToiseX = WIN_WIDTH;
+			torToiseFre = rand() % 300+200;
+		}
+	}
+
+	if (torToiseExist)
+	{
+		torToiseX -= bgSpeed[2];
+		if (torToiseX < -imgTortoise.getwidth())
+		{
+			torToiseExist = false;
+		}
+	}
+	
 }
 //游戏背景(坐标)
 void updateBg()
@@ -59,18 +116,56 @@ void updateBg()
 	putimagePNG2(bgX[2], 330, &imgBgs[2]);
 }
 
+void jump()
+{
+	heroJump = true;
+	update = true;
+}
+
+//按键输入(先判断有没有按键输入)
+void keyEvent()
+{
+	char ch;
+	if (kbhit()) {//有按键输入返回true
+		ch=getch();
+		if (ch ==' ')
+		{
+			jump();
+		}
+	}
+}
+
+void updateEnemy()
+{
+	if (torToiseExist) {
+		putimagePNG2(torToiseX, torToiseY,WIN_WIDTH,&imgTortoise);
+	}
+}
+
 int main()
 {
 	init();
-
+	int timer = 0;
 	while (1)
 	{
-		BeginBatchDraw();
-		updateBg();
-		putimagePNG2(heroX,heroY,&imgHeros[heroIndex]);
-		EndBatchDraw();//解决频闪
-		fly();
-		Sleep(30);
+		keyEvent();
+       timer += getDelay();
+	   if (timer > 30)
+	   {
+		   timer = 0;
+		   update = true;
+	   }
+
+	   if (update)
+	   {
+		   update = false;
+		   BeginBatchDraw();
+		   updateBg();
+		   putimagePNG2(heroX, heroY, &imgHeros[heroIndex]);
+		   updateEnemy();
+		   EndBatchDraw();//解决频闪
+		   fly();
+	   }
 	}
 	
 
@@ -78,3 +173,6 @@ int main()
 
 	return 0;
 }
+
+
+
